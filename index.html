@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filament Dry Box</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+</head>
+<body>
+  <div class="card">
+    <h1>Filament Dry Box</h1>
+    <div class="value">🌡️ Temperature: <span id="temp">N/A</span> °C</div>
+    <div class="value">💧 Humidity: <span id="hum">N/A</span> %</div>
+    <div class="value">🔋 Battery: <span id="battery">N/A</span> %</div>
+    <div class="value">⚡ Power: <span id="powerState">N/A</span></div>
+    <div class="value">⏱ Standby Timeout: <span id="timeoutMinutes">N/A</span> minutes</div>
+    <select id="timeoutSelect">
+      <option value="1">1 minute</option>
+      <option value="2">2 minutes</option>
+      <option value="5">5 minutes</option>
+      <option value="10">10 minutes</option>
+    </select>
+    <br>
+    <button id="setTimeout" onclick="setTimeoutValue()">Set Timeout</button>
+    <br>
+    <button id="powerOn" onclick="setPower('on')">Power On</button>
+    <button id="powerOff" onclick="setPower('off')">Power Off</button>
+  </div>
+  
+  <script src="js/script.js"></script> <!-- Place the script tag here -->
+</body>
+</html>
