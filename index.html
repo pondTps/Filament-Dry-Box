@@ -79,14 +79,39 @@
   </div>
 
   <script>
-    const client = new Paho.MQTT.Client('broker.hivemq.com', 8000, '/mqtt', 'web_client_' + Math.random().toString(16).substr(2, 8));
+    const client = new Paho.MQTT.Client('your-broker-id.mqtt.hivemq.cloud', 8884, '/mqtt', 'web_client_' + Math.random().toString(16).substr(2, 8));
     let isConnected = false;
+
+    function connectMQTT() {
+      client.connect({
+        useSSL: true,
+        userName: 'your-username',
+        password: 'your-password',
+        onSuccess: function() {
+          console.log('Connected to MQTT Broker');
+          isConnected = true;
+          client.subscribe('filament/temperature');
+          client.subscribe('filament/humidity');
+          client.subscribe('filament/battery');
+          client.subscribe('filament/power');
+          client.subscribe('filament/timeout');
+          updateButtonStates();
+        },
+        onFailure: function(responseObject) {
+          console.error('Connection failed, retrying in 5 seconds:', responseObject.errorMessage);
+          isConnected = false;
+          updateButtonStates();
+          setTimeout(connectMQTT, 5000); // Retry every 5 seconds
+        }
+      });
+    }
 
     client.onConnectionLost = function(responseObject) {
       if (responseObject.errorCode !== 0) {
         console.error('Connection lost:', responseObject.errorMessage);
         isConnected = false;
         updateButtonStates();
+        setTimeout(connectMQTT, 5000); // Reconnect on disconnection
       }
     };
 
@@ -141,24 +166,8 @@
       alert('Sent timeout command: ' + minutes + ' minutes');
     }
 
-    client.connect({
-      onSuccess: function() {
-        console.log('Connected to MQTT Broker');
-        isConnected = true;
-        client.subscribe('filament/temperature');
-        client.subscribe('filament/humidity');
-        client.subscribe('filament/battery');
-        client.subscribe('filament/power');
-        client.subscribe('filament/timeout');
-        updateButtonStates();
-      },
-      onFailure: function(responseObject) {
-        console.error('Connection failed:', responseObject.errorMessage);
-        isConnected = false;
-        updateButtonStates();
-        alert('Failed to connect to MQTT Broker');
-      }
-    });
+    // Start the connection
+    connectMQTT();
   </script>
 </body>
 </html>
