@@ -4,8 +4,59 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Filament Dry Box</title>
-  <link rel="stylesheet" href="css/style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: rgb(218, 179, 115);
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #007BFF;
+      margin-bottom: 20px;
+    }
+    .value {
+      font-size: 1.5em;
+      margin: 15px 0;
+    }
+    select, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      border: none;
+      cursor: pointer;
+    }
+    #powerOn {
+      background-color: #28a745;
+      color: white;
+    }
+    #powerOff {
+      background-color: #dc3545;
+      color: white;
+    }
+    #setTimeout {
+      background-color: #007BFF;
+      color: white;
+    }
+    .disabled {
+      background-color: #ccc !important;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
   <div class="card">
@@ -21,13 +72,93 @@
       <option value="5">5 minutes</option>
       <option value="10">10 minutes</option>
     </select>
-    <br>
     <button id="setTimeout" onclick="setTimeoutValue()">Set Timeout</button>
     <br>
     <button id="powerOn" onclick="setPower('on')">Power On</button>
     <button id="powerOff" onclick="setPower('off')">Power Off</button>
   </div>
-  
-  <script src="js/script.js"></script> <!-- Place the script tag here -->
+
+  <script>
+    const client = new Paho.MQTT.Client('broker.hivemq.com', 8000, '/mqtt', 'web_client_' + Math.random().toString(16).substr(2, 8));
+    let isConnected = false;
+
+    client.onConnectionLost = function(responseObject) {
+      if (responseObject.errorCode !== 0) {
+        console.error('Connection lost:', responseObject.errorMessage);
+        isConnected = false;
+        updateButtonStates();
+      }
+    };
+
+    client.onMessageArrived = function(message) {
+      console.log('Message received:', message.destinationName, message.payloadString);
+      if (message.destinationName === 'filament/temperature') {
+        document.getElementById('temp').textContent = message.payloadString === 'N/A' ? 'N/A' : message.payloadString;
+      } else if (message.destinationName === 'filament/humidity') {
+        document.getElementById('hum').textContent = message.payloadString === 'N/A' ? 'N/A' : message.payloadString;
+      } else if (message.destinationName === 'filament/battery') {
+        document.getElementById('battery').textContent = message.payloadString;
+      } else if (message.destinationName === 'filament/power') {
+        document.getElementById('powerState').textContent = message.payloadString === 'on' ? 'On' : 'Off';
+        updateButtonStates();
+      } else if (message.destinationName === 'filament/timeout') {
+        document.getElementById('timeoutMinutes').textContent = message.payloadString;
+      }
+    };
+
+    function updateButtonStates() {
+      const powerState = document.getElementById('powerState').textContent.toLowerCase();
+      document.getElementById('powerOn').disabled = powerState === 'on' || !isConnected;
+      document.getElementById('powerOn').classList.toggle('disabled', powerState === 'on' || !isConnected);
+      document.getElementById('powerOff').disabled = powerState === 'off' || !isConnected;
+      document.getElementById('powerOff').classList.toggle('disabled', powerState === 'off' || !isConnected);
+      document.getElementById('timeoutSelect').disabled = powerState === 'off' || !isConnected;
+      document.getElementById('timeoutSelect').classList.toggle('disabled', powerState === 'off' || !isConnected);
+      document.getElementById('setTimeout').disabled = powerState === 'off' || !isConnected;
+      document.getElementById('setTimeout').classList.toggle('disabled', powerState === 'off' || !isConnected);
+    }
+
+    function setPower(state) {
+      if (!isConnected) {
+        alert('Not connected to MQTT Broker');
+        return;
+      }
+      const message = new Paho.MQTT.Message(state);
+      message.destinationName = 'filament/control';
+      client.send(message);
+      alert('Sent power command: ' + state);
+    }
+
+    function setTimeoutValue() {
+      if (!isConnected) {
+        alert('Not connected to MQTT Broker');
+        return;
+      }
+      const minutes = document.getElementById('timeoutSelect').value;
+      const message = new Paho.MQTT.Message('timeout=' + minutes);
+      message.destinationName = 'filament/control';
+      client.send(message);
+      alert('Sent timeout command: ' + minutes + ' minutes');
+    }
+
+    client.connect({
+      onSuccess: function() {
+        console.log('Connected to MQTT Broker');
+        isConnected = true;
+        client.subscribe('filament/temperature');
+        client.subscribe('filament/humidity');
+        client.subscribe('filament/battery');
+        client.subscribe('filament/power');
+        client.subscribe('filament/timeout');
+        updateButtonStates();
+      },
+      onFailure: function(responseObject) {
+        console.error('Connection failed:', responseObject.errorMessage);
+        isConnected = false;
+        updateButtonStates();
+        alert('Failed to connect to MQTT Broker');
+      }
+    });
+  </script>
 </body>
 </html>
