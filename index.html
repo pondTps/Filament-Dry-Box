@@ -79,14 +79,11 @@
   </div>
 
   <script>
-    const client = new Paho.MQTT.Client('your-broker-id.mqtt.hivemq.cloud', 8884, '/mqtt', 'web_client_' + Math.random().toString(16).substr(2, 8));
+    const client = new Paho.MQTT.Client('broker.hivemq.com', 8000, 'web_client_' + Math.random().toString(16).substr(2, 8));
     let isConnected = false;
 
     function connectMQTT() {
       client.connect({
-        useSSL: true,
-        userName: 'your-username',
-        password: 'your-password',
         onSuccess: function() {
           console.log('Connected to MQTT Broker');
           isConnected = true;
@@ -101,6 +98,7 @@
           console.error('Connection failed, retrying in 5 seconds:', responseObject.errorMessage);
           isConnected = false;
           updateButtonStates();
+          alert('Failed to connect to MQTT Broker: ' + responseObject.errorMessage + '. Retrying...');
           setTimeout(connectMQTT, 5000); // Retry every 5 seconds
         }
       });
@@ -111,6 +109,7 @@
         console.error('Connection lost:', responseObject.errorMessage);
         isConnected = false;
         updateButtonStates();
+        alert('Lost connection to MQTT Broker: ' + responseObject.errorMessage + '. Retrying...');
         setTimeout(connectMQTT, 5000); // Reconnect on disconnection
       }
     };
